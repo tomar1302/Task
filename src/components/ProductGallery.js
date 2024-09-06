@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import ProductItem from './ProductItem';
@@ -10,7 +11,7 @@ const ProductGallery = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
-  const [albumFilter, setAlbumFilter] = useState(''); // Added for filtering by album ID
+  const [albumFilter, setAlbumFilter] = useState('all'); // 'all', '1', '2', '3'
   const limit = 20; // Items to load per scroll
 
   // Fetch products
@@ -20,53 +21,54 @@ const ProductGallery = () => {
       .then(data => {
         const newProducts = [...products, ...data];
         setProducts(newProducts);
-        setFilteredProducts(newProducts);
+        applyFilters(newProducts, searchQuery, albumFilter);  // Apply filters when new data is fetched
         if (data.length === 0) setHasMore(false);
       })
       .catch(error => console.error('Error fetching products', error));
   }, [page]);
 
+  // Apply search and album filters
+  const applyFilters = (productsToFilter, query, albumId) => {
+    let filtered = productsToFilter;
+
+    if (query) {
+      filtered = filtered.filter(product =>
+        product.title.toLowerCase().includes(query.toLowerCase())
+      );
+    }
+
+    if (albumId !== 'all') {
+      filtered = filtered.filter(product => product.albumId === parseInt(albumId));
+    }
+
+    setFilteredProducts(filtered);
+  };
+
   // Handle search and filter
   const handleSearch = useCallback((query) => {
     setSearchQuery(query);
-    let updatedProducts = products;
-
-    // Apply album filter if selected
-    if (albumFilter) {
-      updatedProducts = products.filter(product => product.albumId === parseInt(albumFilter, 10));
-    }
-
-    // Apply search filter
-    if (query) {
-      const filtered = updatedProducts.filter(product => product.title.toLowerCase().includes(query.toLowerCase()));
-      setFilteredProducts(filtered);
-    } else {
-      setFilteredProducts(updatedProducts);
-    }
+    applyFilters(products, query, albumFilter);  // Apply the search query when updating
   }, [products, albumFilter]);
 
-  // Handle album ID filter
+  // Handle album filter
   const handleAlbumFilter = useCallback((albumId) => {
     setAlbumFilter(albumId);
-
-    // Filter products based on the selected album ID
-    const filtered = products.filter(product => product.albumId === parseInt(albumId, 10));
-    setFilteredProducts(filtered);
-  }, [products]);
+    applyFilters(products, searchQuery, albumId);  // Apply the album filter when updating
+  }, [products, searchQuery]);
 
   const fetchMoreData = useCallback(() => {
     setPage(prevPage => prevPage + 1);
   }, []);
 
   return (
-    <div className={styles.productGallery}>
+    <div>
       <SearchBar searchQuery={searchQuery} handleSearch={handleSearch} />
-
-      {/* Filter by Album ID Dropdown */}
+      
+      {/* Filter Dropdown */}
       <div className={styles.filter}>
         <label>Filter by Album ID:</label>
         <select onChange={(e) => handleAlbumFilter(e.target.value)} value={albumFilter}>
-          <option value="">All Albums</option>
+          <option value="all">All Albums</option>
           <option value="1">Album 1</option>
           <option value="2">Album 2</option>
           <option value="3">Album 3</option>
@@ -87,7 +89,6 @@ const ProductGallery = () => {
     </div>
   );
 };
-
 
 
 
